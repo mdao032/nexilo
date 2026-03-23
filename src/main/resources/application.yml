@@ -1,49 +1,7 @@
-server:
-  port: 8080
-  servlet:
-    context-path: /
-
 spring:
-  application:
-    name: nexilo
+  profiles:
+    active: dev
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/nexilo_db
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      pool-name: HikariPool
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        use_sql_comments: true
-        jdbc:
-          time_zone: UTC
-
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    time-zone: UTC
-    default-property-inclusion: non_null
-
-logging:
-  level:
-    root: INFO
-    org.springframework: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  expiration: 86400000

@@ -19,6 +19,22 @@ Avant de commencer, assurez-vous d'avoir installé les outils suivants sur votre
     cd nexilo
     ```
 
+## Configuration
+
+L'application utilise un système de configuration par environnement.
+Le fichier `application.yml` active par défaut le profil `dev`.
+
+### Propriétés d'Environnement
+
+Une propriété personnalisée `environment.type` est disponible pour distinguer les environnements :
+
+```yaml
+environment:
+  type: DEV  # (ou PROD, TEST, etc.)
+```
+
+Cette propriété est mappée dans la classe `EnvironmentProperties`.
+
 2.  **Configuration de la base de données :**
 
     Assurez-vous qu'une instance PostgreSQL est en cours d'exécution.
@@ -65,4 +81,3 @@ Une fois l'application lancée, vous pouvez accéder à :
 *   **Lombok** (Boilerplate code reduction)
 *   **MapStruct** (Mapping d'objets)
 *   **SpringDoc OpenAPI** (Documentation API)
-
