@@ -1,9 +1,6 @@
 package com.nexilo.ai.provider;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.nexilo.ai.dto.AiRequestDto;
-import com.nexilo.ai.dto.AiResponseDto;
-import com.nexilo.ai.service.AiService;
+import com.nexilo.ai.service.AiProviderService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +15,6 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +26,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GeminiService implements AiService {
+public class GeminiService implements AiProviderService {
 
     private static final String GEMINI_API_BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
@@ -120,28 +116,31 @@ public class GeminiService implements AiService {
                 }
 
             } catch (HttpClientErrorException e) {
-                log.error("Gemini erreur client HTTP {} (tentative {}) — body : {}",
-                        e.getStatusCode(), attempt + 1, e.getResponseBodyAsString());
-                return "AI summary temporarily unavailable";
+                String body = e.getResponseBodyAsString();
+                log.error("Gemini erreur client HTTP {} (tentative {}) — URL modele=[{}] body : {}",
+                        e.getStatusCode(), attempt + 1, model, body);
+                // Retourne le détail de l'erreur pour faciliter le diagnostic
+                return "AI summary failed [" + e.getStatusCode() + "]: " + body;
 
             } catch (HttpServerErrorException e) {
+                String body = safeBody(e);
+                log.error("Gemini erreur serveur HTTP {} (tentative {}) — modele=[{}] body : {}",
+                        e.getStatusCode(), attempt + 1, model, body);
                 if (attempt < RETRY_DELAYS_MS.length) {
                     long wait = RETRY_DELAYS_MS[attempt];
-                    log.warn("Gemini erreur 5xx [{}] (tentative {}). Retry dans {} secondes. body={}",
-                            e.getStatusCode(), attempt + 1, wait / 1000, safeBody(e));
+                    log.warn("Retry dans {} secondes...", wait / 1000);
                     sleepSilently(wait);
                 } else {
-                    log.error("Gemini 5xx persistant après {} tentatives.", attempt + 1);
-                    return "AI summary temporarily unavailable";
+                    return "AI summary failed [" + e.getStatusCode() + "]: " + body;
                 }
 
             } catch (RestClientException e) {
-                log.error("Gemini RestClientException (tentative {}) : {}", attempt + 1, e.getMessage());
-                return "AI summary temporarily unavailable";
+                log.error("Gemini RestClientException (tentative {}) modele=[{}] : {}", attempt + 1, model, e.getMessage());
+                return "AI summary failed [network]: " + e.getMessage();
 
             } catch (Exception e) {
-                log.error("Erreur inattendue Gemini summarize (tentative {})", attempt + 1, e);
-                return "AI summary temporarily unavailable";
+                log.error("Erreur inattendue Gemini summarize (tentative {}) modele=[{}]", attempt + 1, model, e);
+                return "AI summary failed [unexpected]: " + e.getMessage();
             }
         }
         return "AI summary temporarily unavailable";
@@ -174,7 +173,7 @@ public class GeminiService implements AiService {
             return "AI summary temporarily unavailable";
         }
 
-        Candidate first = response.candidates.get(0);
+        Candidate first = response.candidates.getFirst();
 
         if (first == null || first.content == null
                 || first.content.parts == null || first.content.parts.isEmpty()) {
@@ -182,7 +181,7 @@ public class GeminiService implements AiService {
             return "AI summary temporarily unavailable";
         }
 
-        String content = first.content.parts.get(0).text;
+        String content = first.content.parts.getFirst().text;
         return Objects.requireNonNullElse(content, "AI summary temporarily unavailable").trim();
     }
 
@@ -208,66 +207,33 @@ public class GeminiService implements AiService {
         }
     }
 
-    // --- Méthodes AiService non utilisées par le pipeline de summarization ---
-
+    // --- generateResponse delegue a summarize ---
     @Override
     public String generateResponse(String prompt) {
         return summarize(prompt);
     }
-
-    @Override
-    public AiResponseDto processRequest(AiRequestDto requestDto) {
-        return null;
-    }
-
-    @Override
-    public List<AiResponseDto> getAllRequests() {
-        return Collections.emptyList();
-    }
-
-    @Override
-    public AiResponseDto getRequest(Long id) {
-        return null;
-    }
-
     // =========================================================================
-    // DTOs internes pour la sérialisation JSON de l'API Gemini
+    // DTOs internes pour la serialisation JSON de l'API Gemini
     // =========================================================================
-
-    /** Corps de la requête envoyée à l'API Gemini. */
-    public record GeminiRequest(List<Content> contents) {}
-
-    /** Contenu structuré d'un tour de conversation (rôle + parties). */
-    public record Content(String role, List<Part> parts) {}
-
-    /** Fragment de texte dans un contenu. */
+    public record GeminiRequest(java.util.List<Content> contents) {}
+    public record Content(String role, java.util.List<Part> parts) {}
     public record Part(String text) {}
-
-    /** Réponse racine retournée par l'API Gemini. */
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class GeminiResponse {
-        public List<Candidate> candidates;
+        public java.util.List<Candidate> candidates;
         public Object promptFeedback;
     }
-
-    /** Candidat de réponse généré par le modèle. */
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class Candidate {
         public ContentResponse content;
         public String finishReason;
     }
-
-    /** Contenu de la réponse d'un candidat. */
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class ContentResponse {
-        public List<PartResponse> parts;
-        public String role;
+        public java.util.List<PartResponse> parts;
     }
-
-    /** Fragment de texte dans la réponse. */
-    @JsonIgnoreProperties(ignoreUnknown = true)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
     public static class PartResponse {
         public String text;
     }
 }
-

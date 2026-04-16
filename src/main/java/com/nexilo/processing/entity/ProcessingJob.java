@@ -1,10 +1,7 @@
 package com.nexilo.processing.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -15,15 +12,17 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "processing_jobs")
 public class ProcessingJob {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String jobType;
-
-    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private JobType jobType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private JobStatus status;
 
     @Column(columnDefinition = "TEXT")
@@ -50,5 +49,9 @@ public class ProcessingJob {
 
     public enum JobStatus {
         PENDING, PROCESSING, COMPLETED, FAILED
+    }
+
+    public enum JobType {
+        SUMMARY, QA, EXTRACTION, GENERATION
     }
 }

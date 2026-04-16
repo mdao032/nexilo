@@ -1,9 +1,7 @@
 package com.nexilo.ai.provider;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.nexilo.ai.dto.AiRequestDto;
-import com.nexilo.ai.dto.AiResponseDto;
-import com.nexilo.ai.service.AiService;
+import com.nexilo.ai.service.AiProviderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,10 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
+import java.util.List;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -27,7 +24,7 @@ import java.util.Objects;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class OpenAIService implements AiService {
+public class OpenAIService implements AiProviderService {
 
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final String MODEL = "gpt-4o-mini";
@@ -136,20 +133,8 @@ public class OpenAIService implements AiService {
         return "Not implemented in OpenAIService";
     }
 
-    @Override
-    public AiResponseDto processRequest(AiRequestDto requestDto) {
-        return null;
-    }
 
-    @Override
-    public List<AiResponseDto> getAllRequests() {
-        return Collections.emptyList();
-    }
 
-    @Override
-    public AiResponseDto getRequest(Long id) {
-        return null;
-    }
 
     // --- DTOs pour l'API OpenAI (Jackson) ---
 

@@ -1,15 +1,12 @@
 package com.nexilo.processing.dto;
 
+import com.nexilo.processing.entity.ProcessingJob.JobType;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Data Transfer Object (DTO) that encapsulates the payload for processing physical files.
- * This class captures the file alongside metadata dictating how the file should be handled.
+ * DTO encapsulant la requete de traitement d'un fichier.
  */
 @Data
 @Builder
@@ -17,21 +14,14 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 public class ProcessingRequest {
 
-    /**
-     * The physical file to process.
-     * Must not be null.
-     */
+    /** Fichier a traiter. Obligatoire. */
     @NotNull(message = "File is required")
     private MultipartFile file;
 
-    /**
-     * The desired type of extraction/processing (e.g., "SUMMARY", "INSIGHTS").
-     * Optional field.
-     */
-    private String type;
+    /** Type de traitement souhaite. SUMMARY par defaut. */
+    @Builder.Default
+    private JobType jobType = JobType.SUMMARY;
 
-    /**
-     * An optional custom name serving as an alias or title override for the file.
-     */
+    /** Nom optionnel pour identifier le job. */
     private String name;
 }
