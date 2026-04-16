@@ -72,8 +72,23 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        byte[] keyBytes;
+        try {
+            keyBytes = java.util.HexFormat.of().parseHex(secretKey);
+        } catch (IllegalArgumentException e) {
+            // Fallback for Base64 if not Hex (though default is Hex)
+            keyBytes = Decoders.BASE64.decode(secretKey);
+        }
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String extractEmail(String token) {
+        return Jwts.parser()
+                .verifyWith(getSignInKey()) // Replaces setSigningKey
+                .build()
+                .parseSignedClaims(token)   // Replaces parseClaimsJws
+                .getPayload()               // Replaces getBody
+                .getSubject();
     }
 }
 

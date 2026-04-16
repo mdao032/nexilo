@@ -37,5 +37,19 @@ public class AiController {
     public ResponseEntity<AiResponseDto> getRequest(@PathVariable Long id) {
         return ResponseEntity.ok(aiService.getRequest(id));
     }
+
+    /**
+     * Endpoint de diagnostic : teste la connexion Gemini avec un texte minimal.
+     * Retourne directement la réponse brute ou le message d'erreur.
+     *
+     * @return la réponse générée par Gemini ou le fallback en cas d'échec
+     */
+    @GetMapping("/test")
+    @Operation(summary = "Test Gemini connectivity with a minimal prompt")
+    public ResponseEntity<String> testGemini() {
+        String result = aiService.summarize(
+                "This is a short test document to verify the AI integration is working correctly.");
+        return ResponseEntity.ok(result);
+    }
 }
 

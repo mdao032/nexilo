@@ -21,24 +21,48 @@ public class DocumentController {
 
     private final DocumentService documentService;
 
+    /**
+     * Crée un nouveau document.
+     *
+     * @param request la requête contenant les informations du document à créer
+     * @return la réponse avec le document créé et le statut HTTP 201 (CREATED)
+     */
     @PostMapping
     @Operation(summary = "Create a new document")
     public ResponseEntity<DocumentResponse> createDocument(@Valid @RequestBody DocumentRequest request) {
         return new ResponseEntity<>(documentService.createDocument(request), HttpStatus.CREATED);
     }
 
+    /**
+     * Récupère un document par son identifiant unique.
+     *
+     * @param id l'identifiant du document
+     * @return le document demandé s'il est trouvé
+     */
     @GetMapping("/{id}")
     @Operation(summary = "Get document by ID")
     public ResponseEntity<DocumentResponse> getDocument(@PathVariable Long id) {
         return ResponseEntity.ok(documentService.getDocument(id));
     }
 
+    /**
+     * Récupère la liste de tous les documents.
+     *
+     * @return la liste des documents disponibles
+     */
     @GetMapping
     @Operation(summary = "Get all documents")
     public ResponseEntity<List<DocumentResponse>> getAllDocuments() {
         return ResponseEntity.ok(documentService.getAllDocuments());
     }
 
+    /**
+     * Met à jour les informations d'un document existant.
+     *
+     * @param id l'identifiant du document à mettre à jour
+     * @param request les nouvelles données du document
+     * @return le document mis à jour
+     */
     @PutMapping("/{id}")
     @Operation(summary = "Update document")
     public ResponseEntity<DocumentResponse> updateDocument(
@@ -47,6 +71,12 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.updateDocument(id, request));
     }
 
+    /**
+     * Supprime un document par son identifiant.
+     *
+     * @param id l'identifiant du document à supprimer
+     * @return une réponse vide avec le statut HTTP 204 (NO CONTENT)
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete document")
     public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
@@ -54,4 +84,3 @@ public class DocumentController {
         return ResponseEntity.noContent().build();
     }
 }
-

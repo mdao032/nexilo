@@ -36,6 +36,11 @@ public class Document {
     @Column(nullable = false)
     private String path;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Status status = Status.PENDING;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -44,4 +49,3 @@ public class Document {
     @Column(insertable = false)
     private LocalDateTime updatedAt;
 }
-

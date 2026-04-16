@@ -39,9 +39,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createUser(UserRequest userRequest) {
-        if (userRepository.existsByUsername(userRequest.getUsername())) {
-             throw new IllegalArgumentException("Username already exists");
-        }
         if (userRepository.existsByEmail(userRequest.getEmail())) {
              throw new IllegalArgumentException("Email already exists");
         }
@@ -56,7 +53,6 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         
-        user.setUsername(userRequest.getUsername());
         user.setEmail(userRequest.getEmail());
         user.setPassword(userRequest.getPassword()); // Note: encode if changed
         
