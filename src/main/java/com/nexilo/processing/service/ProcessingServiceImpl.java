@@ -1,6 +1,5 @@
 package com.nexilo.processing.service;
 
-import com.nexilo.document.entity.ProcessedResult;
 import com.nexilo.processing.dto.ProcessingMapper;
 import com.nexilo.processing.dto.ProcessingRequest;
 import com.nexilo.processing.dto.ProcessingResponse;
@@ -82,7 +81,8 @@ public class ProcessingServiceImpl implements ProcessingService {
         ProcessingJob job = processingRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Processing Job not found: " + jobId));
 
-        if (job.getStatus() != ProcessingJob.JobStatus.COMPLETED) {
+        if (job.getStatus() == ProcessingJob.JobStatus.PENDING
+                || job.getStatus() == ProcessingJob.JobStatus.PROCESSING) {
             return ProcessingResultResponse.builder()
                     .jobId(jobId)
                     .status(job.getStatus().name())
@@ -90,13 +90,17 @@ public class ProcessingServiceImpl implements ProcessingService {
                     .build();
         }
 
-        ProcessedResult result = processedResultRepository.findByJobId(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Result not found for job: " + jobId));
-
-        return ProcessingResultResponse.builder()
-                .jobId(jobId)
-                .status(job.getStatus().name())
-                .summary(result.getSummary())
-                .build();
+        // COMPLETED ou FAILED : retourner le résultat ou le message d'erreur
+        return processedResultRepository.findByJobId(jobId)
+                .map(result -> ProcessingResultResponse.builder()
+                        .jobId(jobId)
+                        .status(job.getStatus().name())
+                        .summary(result.getSummary())
+                        .build())
+                .orElse(ProcessingResultResponse.builder()
+                        .jobId(jobId)
+                        .status(job.getStatus().name())
+                        .summary(job.getStatus() == ProcessingJob.JobStatus.FAILED ? "Le traitement a échoué." : null)
+                        .build());
     }
 }

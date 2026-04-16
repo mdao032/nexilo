@@ -16,7 +16,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Implémentation du service AI utilisant l'API Google Gemini.
@@ -31,8 +30,8 @@ public class GeminiService implements AiProviderService {
     private static final String GEMINI_API_BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
     private static final int MAX_TEXT_LENGTH = 12000;
-    /** Délais de retry en ms : 15s → 30s → 60s */
-    private static final long[] RETRY_DELAYS_MS = {15_000, 30_000, 60_000};
+    /** Délais de retry en ms : 3s → 6s (fail fast pour ne pas bloquer le thread) */
+    private static final long[] RETRY_DELAYS_MS = {3_000, 6_000};
 
     private final RestTemplate restTemplate;
 
@@ -112,15 +111,14 @@ public class GeminiService implements AiProviderService {
                     sleepSilently(wait);
                 } else {
                     log.error("Gemini 429 persistant après {} tentatives. Abandon.", attempt + 1);
-                    return "AI summary temporarily unavailable";
+                    throw new GeminiRateLimitException("Quota Gemini épuisé (429). Réessayez plus tard.");
                 }
 
             } catch (HttpClientErrorException e) {
                 String body = e.getResponseBodyAsString();
                 log.error("Gemini erreur client HTTP {} (tentative {}) — URL modele=[{}] body : {}",
                         e.getStatusCode(), attempt + 1, model, body);
-                // Retourne le détail de l'erreur pour faciliter le diagnostic
-                return "AI summary failed [" + e.getStatusCode() + "]: " + body;
+                throw new GeminiApiException("Gemini erreur API [" + e.getStatusCode() + "]: " + extractErrorMessage(body));
 
             } catch (HttpServerErrorException e) {
                 String body = safeBody(e);
@@ -131,19 +129,22 @@ public class GeminiService implements AiProviderService {
                     log.warn("Retry dans {} secondes...", wait / 1000);
                     sleepSilently(wait);
                 } else {
-                    return "AI summary failed [" + e.getStatusCode() + "]: " + body;
+                    throw new GeminiApiException("Gemini erreur serveur [" + e.getStatusCode() + "]: " + body);
                 }
 
             } catch (RestClientException e) {
                 log.error("Gemini RestClientException (tentative {}) modele=[{}] : {}", attempt + 1, model, e.getMessage());
-                return "AI summary failed [network]: " + e.getMessage();
+                throw new GeminiApiException("Gemini erreur réseau: " + e.getMessage());
+
+            } catch (GeminiRateLimitException | GeminiApiException e) {
+                throw e; // propager sans wrapper
 
             } catch (Exception e) {
                 log.error("Erreur inattendue Gemini summarize (tentative {}) modele=[{}]", attempt + 1, model, e);
-                return "AI summary failed [unexpected]: " + e.getMessage();
+                throw new GeminiApiException("Erreur inattendue: " + e.getMessage());
             }
         }
-        return "AI summary temporarily unavailable";
+        throw new GeminiApiException("Gemini : toutes les tentatives ont échoué.");
     }
 
     /**
@@ -164,13 +165,12 @@ public class GeminiService implements AiProviderService {
 
         if (response == null) {
             log.warn("Gemini : corps de réponse null.");
-            return "AI summary temporarily unavailable";
+            throw new GeminiApiException("Réponse Gemini vide.");
         }
 
         if (response.candidates == null || response.candidates.isEmpty()) {
-            // Gemini peut bloquer la réponse (safety filter) et retourner candidates vide
             log.warn("Gemini : aucun candidat dans la réponse. promptFeedback={}", response.promptFeedback);
-            return "AI summary temporarily unavailable";
+            throw new GeminiApiException("Gemini a retourné une réponse vide (safety filter ou quota). promptFeedback=" + response.promptFeedback);
         }
 
         Candidate first = response.candidates.getFirst();
@@ -178,11 +178,14 @@ public class GeminiService implements AiProviderService {
         if (first == null || first.content == null
                 || first.content.parts == null || first.content.parts.isEmpty()) {
             log.warn("Gemini : contenu du candidat vide. finishReason={}", first != null ? first.finishReason : "null");
-            return "AI summary temporarily unavailable";
+            throw new GeminiApiException("Gemini : contenu vide. finishReason=" + (first != null ? first.finishReason : "null"));
         }
 
         String content = first.content.parts.getFirst().text;
-        return Objects.requireNonNullElse(content, "AI summary temporarily unavailable").trim();
+        if (content == null || content.isBlank()) {
+            throw new GeminiApiException("Gemini : texte généré vide.");
+        }
+        return content.trim();
     }
 
     /**
@@ -211,6 +214,32 @@ public class GeminiService implements AiProviderService {
     @Override
     public String generateResponse(String prompt) {
         return summarize(prompt);
+    }
+
+    /**
+     * Extrait le message d'erreur d'une réponse JSON Gemini, ou retourne le texte brut.
+     */
+    private static String extractErrorMessage(String body) {
+        if (body == null) return "";
+        try {
+            int msgIdx = body.indexOf("\"message\"");
+            if (msgIdx >= 0) {
+                int start = body.indexOf("\"", msgIdx + 10) + 1;
+                int end = body.indexOf("\"", start);
+                return body.substring(start, end);
+            }
+        } catch (Exception ignored) {}
+        return body.length() > 200 ? body.substring(0, 200) : body;
+    }
+
+    /** Exception levée en cas de rate limit Gemini (429). */
+    public static class GeminiRateLimitException extends RuntimeException {
+        public GeminiRateLimitException(String message) { super(message); }
+    }
+
+    /** Exception levée en cas d'erreur générale de l'API Gemini. */
+    public static class GeminiApiException extends RuntimeException {
+        public GeminiApiException(String message) { super(message); }
     }
     // =========================================================================
     // DTOs internes pour la serialisation JSON de l'API Gemini

@@ -83,6 +83,17 @@ public class ProcessingOrchestrator {
         } catch (Exception e) {
             job.setStatus(JobStatus.FAILED);
             jobRepo.save(job);
+
+            // Sauvegarder l'erreur dans ProcessedResult pour que getResult() la retourne
+            try {
+                resultRepo.save(com.nexilo.document.entity.ProcessedResult.builder()
+                        .job(job)
+                        .summary("ÉCHEC: " + e.getMessage())
+                        .build());
+            } catch (Exception saveErr) {
+                log.error("Impossible de sauvegarder l'erreur pour le job {}: {}", job.getId(), saveErr.getMessage());
+            }
+
             log.error("Job {} FAILED (type={}): {}", job.getId(), job.getJobType(), e.getMessage(), e);
         }
     }
