@@ -36,6 +36,17 @@ public class Document {
     @Column(nullable = false)
     private String path;
 
+    /** Clé de stockage du fichier PDF (chemin local ou clé MinIO). */
+    @Column(name = "storage_key", length = 500)
+    private String storageKey;
+
+    /**
+     * URL d'accès au fichier PDF.
+     * En local : chemin relatif. En prod : URL pré-signée MinIO (1h).
+     */
+    @Column(name = "storage_url", columnDefinition = "TEXT")
+    private String storageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

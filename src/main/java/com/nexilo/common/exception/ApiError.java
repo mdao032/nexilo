@@ -1,19 +1,22 @@
 package com.nexilo.common.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+/**
+ * @deprecated Remplacé par {@link ErrorResponse}.
+ * Conservé temporairement pour compatibilité, sera supprimé dans V2.
+ */
+@Deprecated(since = "0.0.2", forRemoval = true)
 public class ApiError {
-    private LocalDateTime timestamp;
-    private int status;
-    private String error;
-    private String message;
-}
+    public LocalDateTime timestamp;
+    public int status;
+    public String error;
+    public String message;
 
+    public ApiError(LocalDateTime timestamp, int status, String error, String message) {
+        this.timestamp = timestamp;
+        this.status = status;
+        this.error = error;
+        this.message = message;
+    }
+}

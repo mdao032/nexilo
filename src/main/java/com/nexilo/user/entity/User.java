@@ -26,10 +26,21 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    /** Plan d'abonnement actif. Défaut : FREE. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserPlan plan = UserPlan.FREE;
+
+    /** Date d'expiration du plan (null = pas d'expiration / gratuit permanent). */
+    @Column(name = "plan_expires_at")
+    private LocalDateTime planExpiresAt;
+
     private LocalDateTime createdAt;
 
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
+        if (this.plan == null) this.plan = UserPlan.FREE;
     }
 }

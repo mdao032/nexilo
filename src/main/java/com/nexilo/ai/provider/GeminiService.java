@@ -5,6 +5,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,12 +20,18 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 /**
- * Implémentation du service AI utilisant l'API Google Gemini.
- * Gère la génération de résumés de documents via le modèle Gemini configuré.
- * Supporte le retry automatique en cas de rate limit (429) ou d'erreur serveur (5xx).
+ * Provider IA utilisant l'API Google Gemini (REST direct via RestTemplate).
+ *
+ * <p>Activé quand {@code nexilo.ai.active-provider=gemini} dans {@code application-dev.yml}.
+ * Marqué {@link org.springframework.context.annotation.Primary} dans ce cas.
+ *
+ * <p>Configuration : {@code google.ai.api-key} et {@code google.ai.model}.
+ * Clé API obtenue sur : https://aistudio.google.com/apikey
  */
 @Slf4j
 @Service
+@Primary
+@ConditionalOnProperty(name = "nexilo.ai.active-provider", havingValue = "gemini")
 @RequiredArgsConstructor
 public class GeminiService implements AiProviderService {
 
